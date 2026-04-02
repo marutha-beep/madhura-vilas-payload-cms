@@ -32,19 +32,33 @@ export const Media: CollectionConfig = {
         if (operation !== 'create') return doc
         if (doc.cloudinaryUrl) return doc
 
-        // Try to get buffer from req.file (available during the same request)
-        const file = (req as any).file || req.file
-        if (!file?.data) {
-          console.error('No file data in req.file')
-          return doc
-        }
-
         try {
-          const buffer = Buffer.isBuffer(file.data)
-            ? file.data
-            : Buffer.from(file.data as ArrayBuffer)
+          // req.file is available during the same request lifecycle
+          const file = req.file as any
+          console.log('req.file keys:', file ? Object.keys(file) : 'null')
+          console.log('req.file.data type:', file?.data ? typeof file.data : 'null')
+          console.log('req.file.data length:', file?.data?.length || file?.data?.byteLength || 0)
 
+          if (!file) {
+            console.error('req.file is null/undefined')
+            return doc
+          }
+
+          let buffer: Buffer
+          if (Buffer.isBuffer(file.data)) {
+            buffer = file.data
+          } else if (file.data instanceof ArrayBuffer) {
+            buffer = Buffer.from(file.data)
+          } else if (file.data && typeof file.data === 'object') {
+            buffer = Buffer.from(Object.values(file.data) as number[])
+          } else {
+            console.error('Unknown file.data type:', typeof file.data)
+            return doc
+          }
+
+          console.log('Buffer size:', buffer.length)
           const url = await uploadBuffer(buffer)
+          console.log('Cloudinary URL:', url)
 
           await req.payload.update({
             collection: 'media',
