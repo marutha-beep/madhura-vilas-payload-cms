@@ -29,7 +29,7 @@ export const Media: CollectionConfig = {
           stream.end(buffer)
         })
 
-        req.file.data = buffer
+        if (req.file) req.file.data = buffer
         ;(req as any).cloudinaryURL = result.secure_url
       },
     ],
