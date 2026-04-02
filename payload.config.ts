@@ -28,10 +28,6 @@ export default buildConfig({
       ssl: { rejectUnauthorized: false },
     },
   }),
-  cors: [
-    'http://localhost:3000',
-    'http://localhost:3001',
-    process.env.NEXT_PUBLIC_SERVER_URL || '',
-  ],
+  cors: '*',
   plugins: [],
 })
