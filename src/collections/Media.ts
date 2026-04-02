@@ -1,5 +1,6 @@
 import type { CollectionConfig } from 'payload'
 import { v2 as cloudinary } from 'cloudinary'
+import fs from 'fs'
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -12,41 +13,45 @@ export const Media: CollectionConfig = {
   access: { read: () => true },
   upload: {
     staticDir: '/tmp/media',
-    handlers: [
-      async (req) => {
-        const fileData = req.file
-        if (!fileData) return
-
-        const buffer: Buffer = Buffer.isBuffer(fileData.data)
-          ? fileData.data
-          : Buffer.from(fileData.data)
-
-        const result = await new Promise<any>((resolve, reject) => {
-          const stream = cloudinary.uploader.upload_stream(
-            { folder: 'madhura-vilas', resource_type: 'auto' },
-            (err, res) => (err ? reject(err) : resolve(res))
-          )
-          stream.end(buffer)
-        })
-
-        if (req.file) req.file.data = buffer
-        ;(req as any).cloudinaryURL = result.secure_url
-      },
-    ],
   },
   hooks: {
-    beforeChange: [
-      async ({ data, req }) => {
-        const url = (req as any).cloudinaryURL
-        if (url) {
-          data.url = url
+    afterChange: [
+      async ({ doc, req, operation }) => {
+        if (operation !== 'create') return doc
+        try {
+          const filePath = `/tmp/media/${doc.filename}`
+          if (!fs.existsSync(filePath)) return doc
+
+          const result = await cloudinary.uploader.upload(filePath, {
+            folder: 'madhura-vilas',
+            overwrite: true,
+          })
+
+          await req.payload.update({
+            collection: 'media',
+            id: doc.id,
+            data: { cloudinaryUrl: result.secure_url },
+            req,
+          })
+
+          return { ...doc, url: result.secure_url, cloudinaryUrl: result.secure_url }
+        } catch (err) {
+          console.error('Cloudinary upload failed:', err)
+          return doc
         }
-        return data
+      },
+    ],
+    afterRead: [
+      ({ doc }) => {
+        if (doc.cloudinaryUrl) {
+          doc.url = doc.cloudinaryUrl
+        }
+        return doc
       },
     ],
   },
   fields: [
     { name: 'alt', type: 'text' },
-    { name: 'url', type: 'text' },
+    { name: 'cloudinaryUrl', type: 'text' },
   ],
 }
