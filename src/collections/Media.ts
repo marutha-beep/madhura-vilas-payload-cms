@@ -2,6 +2,11 @@ import type { CollectionConfig } from 'payload'
 import { v2 as cloudinary } from 'cloudinary'
 import fs from 'fs'
 
+// Ensure upload directory exists
+if (!fs.existsSync('/tmp/media')) {
+  fs.mkdirSync('/tmp/media', { recursive: true })
+}
+
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
