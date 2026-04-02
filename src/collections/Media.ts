@@ -1,11 +1,5 @@
 import type { CollectionConfig } from 'payload'
 import { v2 as cloudinary } from 'cloudinary'
-import fs from 'fs'
-
-// Ensure upload directory exists
-if (!fs.existsSync('/tmp/media')) {
-  fs.mkdirSync('/tmp/media', { recursive: true })
-}
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -13,44 +7,53 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 })
 
+function uploadToCloudinary(buffer: Buffer, filename: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder: 'madhura-vilas', public_id: filename.replace(/\.[^/.]+$/, ''), overwrite: true, resource_type: 'auto' },
+      (err, res) => {
+        if (err) reject(err)
+        else resolve(res!.secure_url)
+      }
+    )
+    stream.end(buffer)
+  })
+}
+
 export const Media: CollectionConfig = {
   slug: 'media',
   access: { read: () => true },
   upload: {
-    staticDir: '/tmp/media',
+    disableLocalStorage: true,
   },
   hooks: {
-    afterChange: [
-      async ({ doc, req, operation }) => {
-        if (operation !== 'create') return doc
+    beforeOperation: [
+      async ({ args, operation }) => {
+        if (operation !== 'create') return args
+        const file = args.req?.file
+        if (!file) return args
+
         try {
-          const filePath = `/tmp/media/${doc.filename}`
-          if (!fs.existsSync(filePath)) return doc
-
-          const result = await cloudinary.uploader.upload(filePath, {
-            folder: 'madhura-vilas',
-            overwrite: true,
-          })
-
-          await req.payload.update({
-            collection: 'media',
-            id: doc.id,
-            data: { cloudinaryUrl: result.secure_url },
-            req,
-          })
-
-          return { ...doc, url: result.secure_url, cloudinaryUrl: result.secure_url }
+          const buffer = Buffer.isBuffer(file.data) ? file.data : Buffer.from(file.data)
+          const url = await uploadToCloudinary(buffer, file.name || 'upload')
+          args.req.file = { ...file, data: buffer }
+          ;(args.req as any).cloudinaryUrl = url
         } catch (err) {
-          console.error('Cloudinary upload failed:', err)
-          return doc
+          console.error('Cloudinary upload error:', err)
         }
+        return args
+      },
+    ],
+    beforeChange: [
+      ({ data, req }) => {
+        const url = (req as any).cloudinaryUrl
+        if (url) data.cloudinaryUrl = url
+        return data
       },
     ],
     afterRead: [
       ({ doc }) => {
-        if (doc.cloudinaryUrl) {
-          doc.url = doc.cloudinaryUrl
-        }
+        if (doc.cloudinaryUrl) doc.url = doc.cloudinaryUrl
         return doc
       },
     ],
