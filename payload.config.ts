@@ -1,6 +1,7 @@
 import { buildConfig } from 'payload'
 import { postgresAdapter } from '@payloadcms/db-postgres'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
+import { cloudinaryPlugin } from 'payload-cloudinary-plugin'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { Users } from './src/collections/Users'
@@ -29,5 +30,7 @@ export default buildConfig({
     },
   }),
   cors: '*',
-  plugins: [],
+  plugins: [
+    cloudinaryPlugin(),
+  ],
 })
