@@ -12,10 +12,10 @@
     "@payloadcms/db-postgres": "3.28.1",
     "@payloadcms/next": "3.28.1",
     "@payloadcms/richtext-lexical": "3.28.1",
+    "cloudinary": "^2.9.0",
     "graphql": "^16.8.1",
     "next": "15.2.8",
     "payload": "3.28.1",
-    "payload-cloudinary-plugin": "^0.1.14",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "sharp": "0.32.6"
