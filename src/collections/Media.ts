@@ -27,27 +27,19 @@ export const Media: CollectionConfig = {
     staticDir: '/tmp/media',
   },
   hooks: {
-    beforeOperation: [
-      async ({ args, operation }) => {
-        if (operation !== 'create') return args
-        const file = args.req?.file
-        if (!file) return args
+    beforeChange: [
+      async ({ data, req, operation }) => {
+        if (operation !== 'create') return data
+        if (!req.file) return data
         try {
-          const buffer = Buffer.isBuffer(file.data)
-            ? file.data
-            : Buffer.from(file.data as ArrayBuffer)
+          const buffer = Buffer.isBuffer(req.file.data)
+            ? req.file.data
+            : Buffer.from(req.file.data as ArrayBuffer)
           const url = await uploadBuffer(buffer)
-          ;(args.req as any)._cloudinaryUrl = url
+          data.cloudinaryUrl = url
         } catch (e) {
           console.error('Cloudinary upload failed:', e)
         }
-        return args
-      },
-    ],
-    beforeChange: [
-      ({ data, req }) => {
-        const url = (req as any)._cloudinaryUrl
-        if (url) data.cloudinaryUrl = url
         return data
       },
     ],
