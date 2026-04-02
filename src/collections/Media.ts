@@ -11,14 +11,14 @@ export const Media: CollectionConfig = {
   slug: 'media',
   access: { read: () => true },
   upload: {
-    staticDir: 'media',
+    staticDir: '/tmp/media',
   },
   hooks: {
     afterChange: [
       async ({ doc, req, operation }) => {
         if (operation !== 'create') return doc
         try {
-          const filePath = `${process.cwd()}/media/${doc.filename}`
+          const filePath = `/tmp/media/${doc.filename}`
           const result = await cloudinary.uploader.upload(filePath, {
             folder: 'madhura-vilas',
             public_id: doc.id,
